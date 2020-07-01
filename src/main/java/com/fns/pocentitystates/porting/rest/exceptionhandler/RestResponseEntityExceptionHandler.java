@@ -1,57 +1,49 @@
 package com.fns.pocentitystates.porting.rest.exceptionhandler;
 
-import com.fns.pocentitystates.porting.support.MobilePortingNotFoundException;
-import com.fns.pocentitystates.support.CustomRuntimeExceptionSchema;
-import org.springframework.http.HttpHeaders;
+import com.fns.pocentitystates.support.exception.CustomRuntimeException;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
-import java.time.LocalDate;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
-
 @ControllerAdvice
+@Order
 public class RestResponseEntityExceptionHandler extends ResponseEntityExceptionHandler {
 
-    @ExceptionHandler(value = { IllegalStateException.class })
-    protected ResponseEntity<Object> handleConflict(RuntimeException ex, WebRequest request) {
-        String bodyOfResponse = "Illegal state exception";
-        return handleExceptionInternal(ex, bodyOfResponse, new HttpHeaders(), HttpStatus.CONFLICT, request);
-    }
+    @ExceptionHandler(value = { CustomRuntimeException.class })
+    public ResponseEntity<Object> handleMobilePortingNotFoundException(CustomRuntimeException ex, WebRequest request) {
 
-    @ExceptionHandler(value = { MobilePortingNotFoundException.class })
-    public ResponseEntity<Object> handleMobilePortingNotFoundException(MobilePortingNotFoundException ex, WebRequest request) {
-
-        CustomRuntimeExceptionSchema exceptionSchema = CustomRuntimeExceptionSchema.builder()
-                .code(ex.getCode())
+        ExceptionSchema exceptionSchema = ExceptionSchema.builder()
                 .message(ex.getMessage())
+                .errorCode(ex.getErrorCode())
                 .timestamp(ex.getTimestamp())
                 .build();
 
-        return new ResponseEntity<>(exceptionSchema, HttpStatus.NOT_FOUND);
+        return new ResponseEntity<>(exceptionSchema, HttpStatus.BAD_REQUEST);
     }
 
-    @Override
-    protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatus status, WebRequest request) {
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("timestamp", LocalDate.now());
-        body.put("status", status.value());
+    @ExceptionHandler(value = { IllegalArgumentException.class })
+    protected ResponseEntity<Object> handleIllegalArgumentException(IllegalArgumentException ex, WebRequest request) {
 
-        List<String> errors = ex.getBindingResult()
-                .getFieldErrors()
-                .stream()
-                .map(x -> x.getDefaultMessage())
-                .collect(Collectors.toList());
+        ExceptionSchema exceptionSchema = ExceptionSchema.builder()
+                .message(ex.getMessage())
+                .timestamp(System.currentTimeMillis())
+                .build();
 
-        body.put("errors", errors);
+        return new ResponseEntity<>(exceptionSchema, HttpStatus.BAD_REQUEST);
+    }
 
-        return new ResponseEntity<>(body, HttpStatus.BAD_REQUEST);
+    @ExceptionHandler(value = { Exception.class })
+    protected ResponseEntity<Object> handleExceptionGeneric(Exception ex, WebRequest request) {
+
+        ExceptionSchema exceptionSchema = ExceptionSchema.builder()
+                .message(ex.getMessage())
+                .timestamp(System.currentTimeMillis())
+                .build();
+
+        return new ResponseEntity<>(exceptionSchema, HttpStatus.BAD_REQUEST);
     }
 }
