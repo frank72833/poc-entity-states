@@ -49,6 +49,14 @@
 				</exclusion>
 			</exclusions>
 		</dependency>
+
+		<!-- https://mvnrepository.com/artifact/com.github.stateless4j/stateless4j -->
+		<dependency>
+			<groupId>com.github.stateless4j</groupId>
+			<artifactId>stateless4j</artifactId>
+			<version>2.6.0</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>

@@ -6,6 +6,7 @@ import com.fns.pocentitystates.porting.serviceprovider.MobilePortingServiceProvi
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -23,6 +24,13 @@ public class MobilePortingController {
     public MobilePortingController(MobilePortingServiceProvider serviceProvider) {
         this.serviceProvider = serviceProvider;
     }
+
+    @GetMapping("/{id}")
+    public MobilePorting getMobilePorting(@PathVariable("id") String id) {
+        return serviceProvider.getMobilePorting(id)
+                .orElseThrow(() -> new IllegalArgumentException("Id not found"));
+    }
+
 
     @PostMapping
     public MobilePorting sendMessage(@RequestBody JsonNode request) {

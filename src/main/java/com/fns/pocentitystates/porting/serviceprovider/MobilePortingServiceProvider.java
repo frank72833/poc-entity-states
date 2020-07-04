@@ -4,11 +4,13 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fns.pocentitystates.porting.MobilePorting;
 import com.fns.pocentitystates.porting.MobilePortingStatus;
 import com.fns.pocentitystates.porting.repository.MobilePortingRepository;
-import com.fns.pocentitystates.porting.support.MobilePortingNotFoundException;
+import com.github.oxo42.stateless4j.StateMachine;
+import com.github.oxo42.stateless4j.StateMachineConfig;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
 import java.util.UUID;
 
 @Slf4j
@@ -16,10 +18,17 @@ import java.util.UUID;
 public class MobilePortingServiceProvider {
 
     private final MobilePortingRepository repository;
+    private final StateMachineConfig<MobilePortingStatus, MobilePortingStatus> mobilePortingConfig;
 
     @Autowired
-    public MobilePortingServiceProvider(MobilePortingRepository repository) {
+    public MobilePortingServiceProvider(MobilePortingRepository repository,
+                                        StateMachineConfig<MobilePortingStatus, MobilePortingStatus> mobilePortingConfig) {
         this.repository = repository;
+        this.mobilePortingConfig = mobilePortingConfig;
+    }
+
+    public Optional<MobilePorting> getMobilePorting(String id) {
+        return repository.findById(id);
     }
 
     public MobilePorting startPorting(JsonNode request) {
@@ -42,54 +51,23 @@ public class MobilePortingServiceProvider {
     }
 
     public MobilePorting updateStatus(String id, String status) {
+        MobilePortingStatus transitionStatus = MobilePortingStatus.valueOf(status);
 
-        MobilePortingStatus newStatus = MobilePortingStatus.valueOf(status);
+        MobilePorting porting = repository.findById(id).orElseThrow(() -> new IllegalArgumentException("Id not found"));
 
-        MobilePorting porting = repository.findById(id)
-                .orElseThrow(() -> new MobilePortingNotFoundException(id));
+        StateMachine<MobilePortingStatus, MobilePortingStatus> mobilePortingStateMachine
+                = new StateMachine<>(porting.getStatus(), mobilePortingConfig);
 
-        MobilePortingStatus transitionedStatus = porting.getStatus().transitionTo(newStatus);
+        mobilePortingStateMachine.fire(transitionStatus);
 
-        switch(newStatus) {
-            case ACAN:
-                cancelPorting(id);
-                break;
-            case ASOL:
-
-                break;
-            case ACON:
-
-                break;
-            case ANEN:
-
-                break;
-            case APOR:
-
-                break;
-            case AREC:
-
-                break;
-            default:
-                throw new IllegalArgumentException("Provided Mobile porting status not valid");
-        }
-
+        MobilePortingStatus transitionedStatus = mobilePortingStateMachine.getState();
         porting.setStatus(transitionedStatus);
 
-        // Save to DB
-        repository.save(porting);
-
-        return porting;
+        return repository.save(porting);
     }
 
-    private void cancelPorting(String portingId) {
-        MobilePorting porting = repository.findById(portingId)
-                .orElseThrow(() -> new MobilePortingNotFoundException(portingId));
-
-        cancelPorting(porting);
-    }
-
-    private void cancelPorting(MobilePorting porting) {
-        log.info("cancelPorting: " + porting);
+    public void onPortingCancelled() {
+        log.info("onPortingCancelled started");
 
         try {
             Thread.sleep(10000);
@@ -97,6 +75,66 @@ public class MobilePortingServiceProvider {
             log.warn("Error sleeping");
         }
 
-        log.info("cancelPorting completed");
+        throw new RuntimeException("Error while cancelling Mobile porting");
+    }
+
+    public void onPortingCompleted() {
+        log.info("onPortingCompleted started");
+
+        try {
+            Thread.sleep(10000);
+        } catch (InterruptedException e) {
+            log.warn("Error sleeping");
+        }
+
+        log.info("onPortingCompleted completed");
+    }
+
+    public void onPortingRejected() {
+        log.info("onPortingRejected started");
+
+        try {
+            Thread.sleep(10000);
+        } catch (InterruptedException e) {
+            log.warn("Error sleeping");
+        }
+
+        log.info("onPortingRejected completed");
+    }
+
+    public void onPortingConfirmed() {
+        log.info("onPortingConfirmed started");
+
+        try {
+            Thread.sleep(10000);
+        } catch (InterruptedException e) {
+            log.warn("Error sleeping");
+        }
+
+        log.info("onPortingConfirmed completed");
+    }
+
+    public void onPortingSolicited() {
+        log.info("onPorting Solicited started");
+
+        try {
+            Thread.sleep(10000);
+        } catch (InterruptedException e) {
+            log.warn("Error sleeping");
+        }
+
+        log.info("onPortingSolicitated completed");
+    }
+
+    public void onPortingProcessed() {
+        log.info("onPortingProcessed started");
+
+        try {
+            Thread.sleep(10000);
+        } catch (InterruptedException e) {
+            log.warn("Error sleeping");
+        }
+
+        log.info("onPortingProcessed completed");
     }
 }
